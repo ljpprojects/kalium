@@ -1,0 +1,9 @@
+#![feature(generic_const_exprs)]
+#![feature(int_roundings)]
+#![feature(macro_metavar_expr)]
+#![feature(macro_metavar_expr_concat)]
+#![feature(ptr_metadata)]
+
+pub mod ecs;
+pub mod ir;
+pub mod target;

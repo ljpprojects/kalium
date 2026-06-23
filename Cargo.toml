@@ -1,0 +1,13 @@
+[package]
+name = "kalium"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "kalium"
+
+[[bin]]
+name = "kas"
+path = "src/main.rs"
+
+[dependencies]
