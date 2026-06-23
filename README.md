@@ -1,3 +1,3 @@
-# Kalium Assembler
+# Kalium Compiler Backend
 
-The Kalium Assembler is an assembler which I wrote for no particular reason
+The compiler backend that runs off of hopes, dreams, and the potassium in your bloodstream.
