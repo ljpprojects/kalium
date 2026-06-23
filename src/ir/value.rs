@@ -1,18 +1,21 @@
 use crate::{ecs::EntityRef, entity_impl, ir::typ::KaliumType};
 
 /// A value that is either a KaliumConstValue or only known at runtime
+#[derive(Clone)]
 pub enum KaliumValue {
     Const(KaliumConstValue),
     Runtime,
 }
 
 /// A value whose value is known at compile time. This differs from an immediate value as you can obtain a KaliumValueRef to a KaliumConstValue
+#[derive(Clone)]
 pub struct KaliumConstValue(pub KaliumImm);
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct KaliumValueRef(u32);
 entity_impl!(KaliumValueRef : u32);
 
+#[derive(Clone)]
 pub enum KaliumImm {
     UInt(usize),
     Int(isize),

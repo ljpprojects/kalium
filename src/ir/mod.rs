@@ -8,7 +8,7 @@ pub mod value;
 pub mod variable;
 
 pub struct KaliumBlock {
-    insts: Vec<KaliumInst>,
+    insts: ExpandingRefSet<KaliumInstRef, u64>,
     predecessors: FixedRefSet<KaliumBlockRef, u64>,
 }
 
@@ -28,7 +28,7 @@ pub struct IrBuilder {
 impl IrBuilder {
     pub fn add_block(&mut self) -> KaliumBlockRef {
         self.blocks.insert(KaliumBlock {
-            insts: Vec::new(),
+            insts: ExpandingRefSet::new(),
             predecessors: FixedRefSet::new(),
         })
     }

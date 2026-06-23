@@ -1,4 +1,4 @@
-use crate::{ecs::EntityRef, entity_impl, ir::{KaliumBlockRef, func::KaliumFuncRef, stack::KaliumStackSlotRef, typ::KaliumType, value::{KaliumGlobalValueRef, KaliumImm, KaliumStaticValueRef, KaliumValueRef}}, target::KaliumTargetSupport};
+use crate::{ecs::EntityRef, entity_impl, ir::{KaliumBlockRef, func::KaliumFuncRef, stack::KaliumStackSlotRef, typ::KaliumType, value::{KaliumConstValue, KaliumGlobalValueRef, KaliumImm, KaliumStaticValueRef, KaliumValueRef}}, target::KaliumTargetSupport};
 
 pub enum IntComparison {
     LessThan,
@@ -29,6 +29,8 @@ pub enum FloatComparison {
 /// We actually use an enum because the assembler can simply check support later
 /// and it is so so so so so much less clunky
 pub enum KaliumInst {
+    ConstValue(KaliumConstValue),
+
     Add(KaliumValueRef, KaliumValueRef, KaliumType),
     Sub(KaliumValueRef, KaliumValueRef, KaliumType),
     Mul(KaliumValueRef, KaliumValueRef, KaliumType),

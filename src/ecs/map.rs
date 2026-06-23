@@ -48,6 +48,10 @@ where
     pub fn get_mut(&mut self, eref: R) -> Option<&mut E> {
         self.entities.get_mut(eref.index())
     }
+
+    pub fn len(&self) -> usize {
+        self.entities.len()
+    }
 }
 
 /// A map that associates owned data with entity references
@@ -128,5 +132,19 @@ where
         let default = self.default.clone();
 
         Some(mem::replace(&mut self.data[idx], default))
+    }
+
+    fn ensure_space(&mut self, eref: R) {
+        if eref.index() < self.data.len() {
+            return
+        }
+
+        self.data.resize(eref.index(), self.default.clone());
+    }
+
+    /// Insert data into the RefMap, associating it with an entity reference.
+    pub fn insert(&mut self, data: D, eref: R) {
+        self.ensure_space(eref);
+        self.data[eref.index()] = data;
     }
 }
