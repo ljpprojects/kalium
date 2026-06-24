@@ -104,9 +104,9 @@ impl<'a> FuncBuilder<'a> {
 
     /// Returns CompacOption::none if typ does not match the type of the imm or lhs, or if the value reference is invalid
     pub fn add_imm(&mut self, lhs: KaliumValueRef, imm: KaliumImm, typ: KaliumType) -> CompactOption<KaliumInstRef> {
-        let &(lhs_val, lhs_typ) = self.func.inst_results.get(Self::val_to_inst_ref(lhs)).unwrap();
+        let (lhs_val, lhs_typ) = self.func.inst_results.get(Self::val_to_inst_ref(lhs)).unwrap();
 
-        if lhs_typ != typ {
+        if *lhs_typ != typ {
             return CompactOption::none()
         }
 
@@ -117,10 +117,16 @@ impl<'a> FuncBuilder<'a> {
                 };
 
                 let res = KaliumConstValue(KaliumImm::Int(v + rhs));
-                let eref = self.func.inst_results.insert(KaliumValue::Const(res));
-                self.func.value_types.insert(typ, eref);
 
-                CompactOption::some(eref)
+                let inst = KaliumInst::ConstValue(res.clone());
+                let inst_ref = self.func.insts.insert(inst);
+
+                let active_block = self.func.blocks.get_mut(self.active_block.unwrap()).unwrap();
+
+                active_block.insts.insert(inst_ref);
+                self.func.inst_results.insert((KaliumValue::Const(res), typ), inst_ref);
+
+                CompactOption::some(inst_ref)
             }
             KaliumValue::Const(KaliumConstValue(KaliumImm::UInt(v))) if typ.is_unsigned() => {
                 let KaliumImm::UInt(rhs) = imm else {
@@ -128,10 +134,16 @@ impl<'a> FuncBuilder<'a> {
                 };
 
                 let res = KaliumConstValue(KaliumImm::UInt(v + rhs));
-                let eref = self.func.inst_results.insert(KaliumValue::Const(res));
-                self.func.value_types.insert(typ, eref);
 
-                CompactOption::some(eref)
+                let inst = KaliumInst::ConstValue(res.clone());
+                let inst_ref = self.func.insts.insert(inst);
+
+                let active_block = self.func.blocks.get_mut(self.active_block.unwrap()).unwrap();
+
+                active_block.insts.insert(inst_ref);
+                self.func.inst_results.insert((KaliumValue::Const(res), typ), inst_ref);
+
+                CompactOption::some(inst_ref)
             }
             KaliumValue::Const(KaliumConstValue(KaliumImm::Double(v))) if matches!(typ, KaliumType::Float64) => {
                 let KaliumImm::Double(rhs) = imm else {
@@ -139,10 +151,16 @@ impl<'a> FuncBuilder<'a> {
                 };
 
                 let res = KaliumConstValue(KaliumImm::Double(v + rhs));
-                let eref = self.func.inst_results.insert(KaliumValue::Const(res));
-                self.func.value_types.insert(typ, eref);
 
-                CompactOption::some(eref)
+                let inst = KaliumInst::ConstValue(res.clone());
+                let inst_ref = self.func.insts.insert(inst);
+
+                let active_block = self.func.blocks.get_mut(self.active_block.unwrap()).unwrap();
+
+                active_block.insts.insert(inst_ref);
+                self.func.inst_results.insert((KaliumValue::Const(res), typ), inst_ref);
+
+                CompactOption::some(inst_ref)
             }
             KaliumValue::Const(KaliumConstValue(KaliumImm::Float(v))) if matches!(typ, KaliumType::Float32) => {
                 let KaliumImm::Float(rhs) = imm else {
@@ -150,20 +168,126 @@ impl<'a> FuncBuilder<'a> {
                 };
 
                 let res = KaliumConstValue(KaliumImm::Float(v + rhs));
-                let eref = self.func.inst_results.insert(KaliumValue::Const(res));
-                self.func.value_types.insert(typ, eref);
 
-                CompactOption::some(eref)
-            }
-            // We do NOT know the value, so we must emit an instruction
-            KaliumValue::Runtime => {
-                let inst = KaliumInst::AddImm(lhs, imm, typ);
-                let active_block = self.func.blocks.get_mut(self.active_block.unwrap()).unwrap();
+                let inst = KaliumInst::ConstValue(res.clone());
                 let inst_ref = self.func.insts.insert(inst);
-                active_block.insts.insert(inst_ref);
 
-                let res = Kalium
+                let active_block = self.func.blocks.get_mut(self.active_block.unwrap()).unwrap();
+
+                active_block.insts.insert(inst_ref);
+                self.func.inst_results.insert((KaliumValue::Const(res), typ), inst_ref);
+
+                CompactOption::some(inst_ref)
             }
+            // We do NOT know the lhs, so we must emit an instruction
+            KaliumValue::Runtime => {
+                let res = KaliumValue::Runtime;
+                let inst = KaliumInst::AddImm(lhs, imm, typ);
+                let inst_ref = self.func.insts.insert(inst);
+
+                let active_block = self.func.blocks.get_mut(self.active_block.unwrap()).unwrap();
+
+                active_block.insts.insert(inst_ref);
+                self.func.inst_results.insert((res, typ), inst_ref);
+
+                CompactOption::some(inst_ref)
+            }
+            _ => CompactOption::none()
+        }
+    }
+
+    /// Returns CompacOption::none if typ does not match the type of the imm or lhs, or if the value reference is invalid
+    pub fn add(&mut self, lhs: KaliumValueRef, rhs: KaliumValueRef, typ: KaliumType) -> CompactOption<KaliumInstRef> {
+        let (lhs_val, lhs_typ) = self.func.inst_results.get(Self::val_to_inst_ref(lhs)).unwrap();
+        let (rhs_val, rhs_typ) = self.func.inst_results.get(Self::val_to_inst_ref(rhs)).unwrap();
+
+        if *lhs_typ != typ {
+            return CompactOption::none()
+        }
+
+        match lhs_val {
+            KaliumValue::Const(KaliumConstValue(KaliumImm::Int(v))) if typ.is_signed() => {
+                let KaliumImm::Int(rhs) = imm else {
+                    return CompactOption::none()
+                };
+
+                let res = KaliumConstValue(KaliumImm::Int(v + rhs));
+
+                let inst = KaliumInst::ConstValue(res.clone());
+                let inst_ref = self.func.insts.insert(inst);
+
+                let active_block = self.func.blocks.get_mut(self.active_block.unwrap()).unwrap();
+
+                active_block.insts.insert(inst_ref);
+                self.func.inst_results.insert((KaliumValue::Const(res), typ), inst_ref);
+
+                CompactOption::some(inst_ref)
+            }
+            KaliumValue::Const(KaliumConstValue(KaliumImm::UInt(v))) if typ.is_unsigned() => {
+                let KaliumImm::UInt(rhs) = imm else {
+                    return CompactOption::none()
+                };
+
+                let res = KaliumConstValue(KaliumImm::UInt(v + rhs));
+
+                let inst = KaliumInst::ConstValue(res.clone());
+                let inst_ref = self.func.insts.insert(inst);
+
+                let active_block = self.func.blocks.get_mut(self.active_block.unwrap()).unwrap();
+
+                active_block.insts.insert(inst_ref);
+                self.func.inst_results.insert((KaliumValue::Const(res), typ), inst_ref);
+
+                CompactOption::some(inst_ref)
+            }
+            KaliumValue::Const(KaliumConstValue(KaliumImm::Double(v))) if matches!(typ, KaliumType::Float64) => {
+                let KaliumImm::Double(rhs) = imm else {
+                    return CompactOption::none()
+                };
+
+                let res = KaliumConstValue(KaliumImm::Double(v + rhs));
+
+                let inst = KaliumInst::ConstValue(res.clone());
+                let inst_ref = self.func.insts.insert(inst);
+
+                let active_block = self.func.blocks.get_mut(self.active_block.unwrap()).unwrap();
+
+                active_block.insts.insert(inst_ref);
+                self.func.inst_results.insert((KaliumValue::Const(res), typ), inst_ref);
+
+                CompactOption::some(inst_ref)
+            }
+            KaliumValue::Const(KaliumConstValue(KaliumImm::Float(v))) if matches!(typ, KaliumType::Float32) => {
+                let KaliumImm::Float(rhs) = imm else {
+                    return CompactOption::none()
+                };
+
+                let res = KaliumConstValue(KaliumImm::Float(v + rhs));
+
+                let inst = KaliumInst::ConstValue(res.clone());
+                let inst_ref = self.func.insts.insert(inst);
+
+                let active_block = self.func.blocks.get_mut(self.active_block.unwrap()).unwrap();
+
+                active_block.insts.insert(inst_ref);
+                self.func.inst_results.insert((KaliumValue::Const(res), typ), inst_ref);
+
+                CompactOption::some(inst_ref)
+            }
+            // We do NOT know the lhs, so we must emit an instruction
+            KaliumValue::Runtime => {
+                let res = KaliumValue::Runtime;
+                let inst = KaliumInst::AddImm(lhs, imm, typ);
+                let inst_ref = self.func.insts.insert(inst);
+
+                let active_block = self.func.blocks.get_mut(self.active_block.unwrap()).unwrap();
+
+                active_block.insts.insert(inst_ref);
+                self.func.inst_results.insert((res, typ), inst_ref);
+
+                CompactOption::some(inst_ref)
+            }
+            _ => CompactOption::none()
         }
     }
 }
